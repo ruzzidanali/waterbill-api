@@ -29,12 +29,18 @@ export async function pdfToPNG(filePath) {
 
   console.log(`🧩 Running pdftoppm on: ${filePath}`);
   execSync(`pdftoppm -r 300 -singlefile -png "${filePath}" "${outPrefix}"`);
+
+  // 🧱 FIX: use a temp resized file
+  const resizedPng = `${outPrefix}_resized.png`;
   await sharp(rawPng)
     .resize(designWidth, designHeight, { fit: "fill" })
-    .toFile(rawPng);
+    .toFile(resizedPng);
+  fs.renameSync(resizedPng, rawPng);
+
   console.log(`✅ PNG created: ${rawPng}`);
   return rawPng;
 }
+
 
 /* --------------------------------------------------
    🧭 detectRegionHybrid
