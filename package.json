@@ -1,10 +1,12 @@
 {
   "name": "waterbill-api",
   "version": "1.0.0",
+  "description": "OCR-based water bill extraction API using Node.js, Sharp, Poppler, and Tesseract",
   "type": "module",
   "main": "extractWaterBillsAPI.js",
   "scripts": {
-    "start": "node extractWaterBillsAPI.js"
+    "start": "node extractWaterBillsAPI.js",
+    "dev": "nodemon extractWaterBillsAPI.js"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -12,6 +14,24 @@
     "cors": "^2.8.5",
     "sharp": "^0.33.2",
     "tesseract.js": "^5.1.0",
-    "pdfjs-dist": "^3.9.179"
-  }
+    "pdfjs-dist": "^3.9.179",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "OCR",
+    "Water Bill",
+    "API",
+    "Tesseract",
+    "Poppler",
+    "Node.js",
+    "Express"
+  ],
+  "author": "Muhammad Ruzzidan Bin Mohd Ali",
+  "license": "MIT"
 }
