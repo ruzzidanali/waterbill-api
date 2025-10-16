@@ -1,20 +1,32 @@
-FROM node:18-bullseye
+# Use Node.js 20 with Debian Bullseye (best for OCR libs)
+FROM node:20-bullseye
 
-# Install Poppler (for pdftoppm)
-RUN apt-get update && apt-get install -y poppler-utils
+# Install system dependencies for PDF & OCR
+RUN apt-get update && apt-get install -y \
+  poppler-utils \           
+  # for pdftoppm
+  tesseract-ocr \           
+  # main OCR engine
+  tesseract-ocr-eng \       
+  # English language pack
+  libtesseract-dev \        
+  # dev headers (some builds need this)
+  libleptonica-dev \        
+  # image processing dependency
+  && rm -rf /var/lib/apt/lists/*
 
-# Create app directory
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Copy package files first and install dependencies
 COPY package*.json ./
 RUN npm install
 
-# Copy source
+# Copy the rest of your project
 COPY . .
 
-# Expose API port
-EXPOSE 3000
+# Expose your app port (same as .env)
+EXPOSE 10000
 
 # Run the API
 CMD ["node", "extractWaterBillsAPI.js"]
