@@ -12,9 +12,9 @@ debug_text/crops/
 debug_text/debug/
 
 # Temporary images
-*.png
-*.jpg
-*.jpeg
+#*.png
+#*.jpg
+#*.jpeg
 
 # Local PDFs and test files
 *.pdf
