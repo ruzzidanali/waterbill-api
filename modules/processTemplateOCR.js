@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
-import { createWorker } from "tesseract.js";
+// import { createWorker } from "tesseract.js";
 import dotenv from "dotenv";
 import {
   parseJohorFields,
@@ -9,6 +9,7 @@ import {
   parseNegeriSembilanFields,
   standardizeOutput
 } from "./regionParsers.js";
+import { runNativeOCR } from "./nativeOCR.js";
 
 dotenv.config();
 
@@ -67,7 +68,7 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
   const meta = await sharp(imagePath).metadata();
   const scaleX = meta.width / designWidth;
   const scaleY = meta.height / designHeight;
-  const worker = await createWorker("eng");
+  // const worker = await createWorker("eng");
   const results = {};
 
   // 📬 Address OCR first
@@ -119,8 +120,9 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
         .normalize()
         .threshold(180)
         .toFile(crop);
-      const r = await worker.recognize(crop);
-      let text = r.data.text.trim();
+      // const r = await worker.recognize(crop);
+      // let text = r.data.text.trim();
+      let text = await runNativeOCR(crop);
       console.log(`📄 OCR ${key}:`, `"${text}"`);
       if (
         ["Bil Semasa", "Jumlah Perlu Dibayar", "Baki Terdahulu", "Cagaran", "Penggunaan (m3)"].includes(
