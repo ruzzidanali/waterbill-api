@@ -81,6 +81,7 @@ async function pdfToPNG(pdfPath) {
   const rawPngPath = `${outPrefix}_raw.png`;
   const resizedPngPath = `${outPrefix}.png`;
 
+  console.log("🧩 Running pdftoppm on:", pdfPath);
   execSync(`pdftoppm -r 300 -singlefile -png "${pdfPath}" "${outPrefix}_raw"`);
 
   await sharp(rawPngPath)
