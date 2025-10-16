@@ -69,6 +69,9 @@ async function quickOCR(pngPath) {
   return res.data.text;
 }
 
+console.log("🗂️ Templates found:", fs.readdirSync(templatesDir));
+
+
 /* --------------------------------------------------
    🚀 processPDF
 -------------------------------------------------- */
@@ -85,7 +88,10 @@ export async function processPDF(filePath) {
   if (region === "unknown") return { ok: false, message: "Unknown region" };
 
   // Load region template
-  const templatePath = path.join(templatesDir, `${region}.json`);
+  const templatePath = path.join(
+    templatesDir,
+    `${regionChecked.toLowerCase()}.json`
+  );
   const template = JSON.parse(fs.readFileSync(templatePath, "utf8"));
 
   // Run OCR + parser
