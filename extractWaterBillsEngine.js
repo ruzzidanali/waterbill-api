@@ -18,8 +18,8 @@ const __dirname = path.dirname(__filename);
 const pdfjsLib = pdfjsLibRaw.default ?? pdfjsLibRaw;
 
 // 🧠 Directories from .env (with defaults)
-const DEBUG_DIR = process.env.DEBUG_DIR || "debug_text";
-const TEMPLATE_DIR = process.env.TEMPLATE_DIR || "templates";
+const DEBUG_DIR = path.join(process.cwd(), process.env.DEBUG_DIR || "debug_text");
+const TEMPLATE_DIR = path.join(process.cwd(), process.env.TEMPLATE_DIR || "templates");
 
 // 🧱 Ensure folders exist
 for (const d of [DEBUG_DIR, TEMPLATE_DIR, path.join(DEBUG_DIR, "debug")]) {
@@ -80,6 +80,7 @@ async function pdfToPNG(pdfPath) {
   const outPrefix = path.join(__dirname, DEBUG_DIR, base);
   const rawPngPath = `${outPrefix}_raw.png`;
   const resizedPngPath = `${outPrefix}.png`;
+  console.log("✅ PNG created:", resizedPngPath, fs.existsSync(resizedPngPath));
 
   console.log("🧩 Running pdftoppm on:", pdfPath);
   execSync(`pdftoppm -r 300 -singlefile -png "${pdfPath}" "${outPrefix}_raw"`);

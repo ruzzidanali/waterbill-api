@@ -18,7 +18,7 @@ const __dirname = path.resolve();
 
 // 🧱 Ensure debug folders exist
 const debugDir = path.join(__dirname, DEBUG_DIR);
-const cropsDir = path.join(debugDir, "crops");
+const cropsDir = path.join(process.cwd(), process.env.DEBUG_DIR || "debug_text", "crops");
 for (const d of [debugDir, cropsDir]) {
   if (!fs.existsSync(d)) {
     fs.mkdirSync(d, { recursive: true });
@@ -114,6 +114,11 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
     const crop = path.join(cropsDir, `${key.replace(/\s+/g, "_")}.png`);
     try {
       await sharp(imagePath).extract(s).toFile(crop);
+      await sharp(crop)
+        .grayscale()
+        .normalize()
+        .threshold(180)
+        .toFile(crop);
       const r = await worker.recognize(crop);
       let text = r.data.text.trim();
       console.log(`📄 OCR ${key}:`, `"${text}"`);
