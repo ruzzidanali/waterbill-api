@@ -1,31 +1,18 @@
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
-// import { createWorker } from "tesseract.js";
-import dotenv from "dotenv";
+import { runNativeOCR } from "./nativeOCR.js";
 import {
   parseJohorFields,
   parseKedahFields,
   parseNegeriSembilanFields,
-  standardizeOutput
+  standardizeOutput,
 } from "./regionParsers.js";
-import { runNativeOCR } from "./nativeOCR.js";
 
-dotenv.config();
-
-// 🧩 Environment-aware directories
-const DEBUG_DIR = process.env.DEBUG_DIR || "debug_text";
-const __dirname = path.resolve();
-
-// 🧱 Ensure debug folders exist
-const debugDir = path.join(__dirname, DEBUG_DIR);
-const cropsDir = path.join(process.cwd(), process.env.DEBUG_DIR || "debug_text", "crops");
-for (const d of [debugDir, cropsDir]) {
-  if (!fs.existsSync(d)) {
-    fs.mkdirSync(d, { recursive: true });
-    console.log(`📁 Created folder: ${d}`);
-  }
-}
+const debugDir = path.join(process.cwd(), "debug_text");
+const cropsDir = path.join(debugDir, "crops");
+if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+if (!fs.existsSync(cropsDir)) fs.mkdirSync(cropsDir, { recursive: true });
 
 // 🧮 Design reference
 const designWidth = 2481;
@@ -45,11 +32,14 @@ function cleanNumeric(v) {
 
 function cleanAddress(text) {
   if (!text) return "";
-  let lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  let lines = text
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   const stopWords = ["selangor", "kuala lumpur", "putrajaya", "labuan"];
-  const lowerLines = lines.map(l => l.toLowerCase());
-  const idx = lowerLines.findLastIndex(l =>
-    stopWords.some(c => l.includes(c))
+  const lowerLines = lines.map((l) => l.toLowerCase());
+  const idx = lowerLines.findLastIndex((l) =>
+    stopWords.some((c) => l.includes(c))
   );
   if (idx !== -1) lines = lines.slice(0, idx + 1);
   return lines.join("\n");
@@ -57,18 +47,21 @@ function cleanAddress(text) {
 
 function countAddressLines(t) {
   if (!t) return 6;
-  const lines = t.split(/\n+/).map(l => l.trim()).filter(l => l.length > 0);
+  const lines = t
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
   return lines.length;
 }
 
 /* --------------------------------------------------
    ✂️ processTemplateOCR()
+   Uses native Tesseract OCR (via runNativeOCR)
 -------------------------------------------------- */
 export async function processTemplateOCR(imagePath, template, fileName, region) {
   const meta = await sharp(imagePath).metadata();
   const scaleX = meta.width / designWidth;
   const scaleY = meta.height / designHeight;
-  // const worker = await createWorker("eng");
   const results = {};
 
   // 📬 Address OCR first
@@ -79,12 +72,11 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
       left: Math.round(b.x * scaleX),
       top: Math.round(b.y * scaleY),
       width: Math.round(b.w * scaleX),
-      height: Math.round(b.h * scaleY)
+      height: Math.round(b.h * scaleY),
     };
     const addrCrop = path.join(cropsDir, "Address.png");
     await sharp(imagePath).extract(s).toFile(addrCrop);
-    const r = await worker.recognize(addrCrop);
-    addressText = cleanAddress(r.data.text.trim());
+    addressText = cleanAddress(await runNativeOCR(addrCrop));
     results["Address"] = addressText;
   }
 
@@ -99,10 +91,10 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
     "Baki Terdahulu",
     "Bil Semasa",
     "Jumlah Perlu Dibayar",
-    "Penggunaan (m3)"
+    "Penggunaan (m3)",
   ];
 
-  // 🔲 OCR each defined box
+  // 🔲 OCR every defined box
   for (const [key, box] of Object.entries(template)) {
     if (key === "Address") continue;
     const applyOffset = moveKeys.includes(key) ? offsetY : 0;
@@ -110,36 +102,29 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
       left: Math.round(box.x * scaleX),
       top: Math.round((box.y + applyOffset) * scaleY),
       width: Math.round(box.w * scaleX),
-      height: Math.round(box.h * scaleY)
+      height: Math.round(box.h * scaleY),
     };
     const crop = path.join(cropsDir, `${key.replace(/\s+/g, "_")}.png`);
     try {
-      await sharp(imagePath).extract(s).toFile(crop);
-      await sharp(crop)
+      await sharp(imagePath)
+        .extract(s)
         .grayscale()
         .normalize()
         .threshold(180)
         .toFile(crop);
-      // const r = await worker.recognize(crop);
-      // let text = r.data.text.trim();
-      let text = await runNativeOCR(crop);
+      const text = (await runNativeOCR(crop)).trim();
       console.log(`📄 OCR ${key}:`, `"${text}"`);
-      if (
-        ["Bil Semasa", "Jumlah Perlu Dibayar", "Baki Terdahulu", "Cagaran", "Penggunaan (m3)"].includes(
-          key
-        )
-      )
-        text = cleanNumeric(text);
-      results[key] = text;
-    } catch {
+      results[key] = ["Bil Semasa", "Jumlah Perlu Dibayar", "Baki Terdahulu", "Cagaran", "Penggunaan (m3)"].includes(key)
+        ? cleanNumeric(text)
+        : text;
+    } catch (err) {
+      console.warn(`⚠️ OCR failed for ${key}:`, err.message);
       results[key] = "";
     }
   }
 
-  await worker.terminate();
-
   // 🧮 Compute date range & days
-  const norm = d => {
+  const norm = (d) => {
     if (!d) return null;
     const cleaned = d
       .trim()
@@ -155,12 +140,10 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
 
   const start =
     norm(results["Bilangan Hari - Start"]) ||
-    norm(results["Bilangan_Hari_-_Start"]) ||
-    norm(results["Bilangan_Hari - Start"]);
+    norm(results["Bilangan_Hari_-_Start"]);
   const end =
     norm(results["Bilangan Hari - End"]) ||
-    norm(results["Bilangan_Hari_-_End"]) ||
-    norm(results["Bilangan_Hari - End"]);
+    norm(results["Bilangan_Hari_-_End"]);
 
   let bilDays = "";
   let tempohBil = "";
@@ -184,10 +167,10 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
     "Address Lines Count": addressLines,
     ...results,
     ...(tempohBil ? { "Tempoh Bil": tempohBil } : {}),
-    ...(bilDays ? { "Bilangan Hari": bilDays } : {})
+    ...(bilDays ? { "Bilangan Hari": bilDays } : {}),
   };
 
-  // 🧮 Region-specific parsing
+  // 🧮 Region-specific post-processing
   const reg = region.toLowerCase();
   if (reg.includes("johor")) {
     final = parseJohorFields(results);
@@ -200,11 +183,9 @@ export async function processTemplateOCR(imagePath, template, fileName, region) 
     final = {
       ...parseNegeriSembilanFields(results),
       "File Name": fileName,
-      Region: "Negeri-Sembilan"
+      Region: "Negeri-Sembilan",
     };
   }
 
-  // 🧾 Standardize
-  const standardized = standardizeOutput(final);
-  return standardized;
+  return standardizeOutput(final);
 }
