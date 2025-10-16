@@ -16,7 +16,7 @@ export function parseJohorFields(results) {
     if (tunggakanRaw) {
         // Try to find any numeric amount after TUNGGAKAN
         const tunggakanMatch = tunggakanRaw.match(
-            /TUNGGAKAN[\s\S]{0,30}?([0-9]+(?:[.,][0-9]{1,2})?)/i
+            /TUNGGAKAN(?:\s+\d{2}\/\d{2}\/\d{2,4})?(?:\s+[A-Z0-9\/]+)?\s+([0-9]+(?:[.,][0-9]{1,2})?)/i
         );
         out["Tunggakan"] = tunggakanMatch
             ? tunggakanMatch[1].replace(",", ".")
