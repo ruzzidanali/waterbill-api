@@ -77,21 +77,38 @@ async function runOCRText(pdfPath) {
 -------------------------------------------------- */
 async function pdfToPNG(pdfPath) {
   const base = path.basename(pdfPath, ".pdf");
-  const outPrefix = path.join(__dirname, DEBUG_DIR, base);
+
+  // Always use absolute path under /app (Render safe)
+  const debugDir = path.join(process.cwd(), process.env.DEBUG_DIR || "debug_text");
+  if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+
+  const outPrefix = path.join(debugDir, base);
   const rawPngPath = `${outPrefix}_raw.png`;
   const resizedPngPath = `${outPrefix}.png`;
-  console.log("✅ PNG created:", resizedPngPath, fs.existsSync(resizedPngPath));
 
   console.log("🧩 Running pdftoppm on:", pdfPath);
+
+  // Convert PDF → PNG (300 DPI)
   execSync(`pdftoppm -r 300 -singlefile -png "${pdfPath}" "${outPrefix}_raw"`);
 
+  // Check if raw output exists
+  console.log("🧾 Checking raw PNG:", fs.existsSync(rawPngPath) ? "✅ Found" : "❌ Missing");
+
+  // Resize to standard dimensions
   await sharp(rawPngPath)
     .resize(designWidth, designHeight, { fit: "fill" })
     .toFile(resizedPngPath);
 
-  fs.unlinkSync(rawPngPath);
+  console.log("✅ PNG created:", resizedPngPath, fs.existsSync(resizedPngPath));
+
+  // Cleanup temporary raw image
+  try {
+    fs.unlinkSync(rawPngPath);
+  } catch {}
+
   return resizedPngPath;
 }
+
 
 /* --------------------------------------------------
    4️⃣ detectRegionHybrid()
