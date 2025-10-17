@@ -120,26 +120,22 @@ export function parseJohorFields(results) {
 
 export function parseKedahFields(results, fileName) {
   const section =
-    results[
-      "Jumlah Caj Semasa, Jumlah Tunggakan dan Jumlah Perlu Dibayar Section"
-    ] || "";
+    results["Jumlah Caj Semasa, Jumlah Tunggakan dan Jumlah Perlu Dibayar Section"] || "";
 
-  // 🧾 Helper: extract numeric RM values
+  // 🧾 Helper: extract numeric values (robust against missing RM / newlines)
   const getValue = (label) => {
     const regex = new RegExp(
-      label + "\\s*:\\s*RM\\s*([0-9]+(?:[.,][0-9]{1,2})?)",
+      label + "[^0-9]*([0-9]+(?:[.,][0-9]{1,2})?)",
       "i"
     );
     const match = section.match(regex);
     return match ? match[1].replace(",", ".") : "0.00";
   };
 
-  // 🧾 Build clean structured output in your desired order
+  // 🧾 Build clean structured output
   return {
     "File Name": fileName,
     "Region": "Kedah",
-
-    // ---- Ordered fields ----
     "Nombor Akaun": results["No. Akaun"] || "",
     "No. Invois": results["No. Bil"] || "",
     "Tarikh": results["Tarikh"] || "",
@@ -152,7 +148,6 @@ export function parseKedahFields(results, fileName) {
     "Cagaran": results["Cagaran"] || "0.00"
   };
 }
-
 
 export function parseNegeriSembilanFields(results) {
   const out = {};
